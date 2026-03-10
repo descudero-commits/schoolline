@@ -366,24 +366,24 @@ input.shake { animation: shake 0.35s; border-color: #ef4444; }
 
 /* student card */
 .s-card {
-  background: var(--t-surface);
-  border: 1px solid var(--t-border);
+  background: rgba(180, 20, 20, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.35);
   border-radius: var(--radius);
   padding: 20px 18px;
   position: relative; overflow: hidden;
   transition: transform 0.2s, border-color 0.2s;
   animation: cardIn 0.45s cubic-bezier(.175,.885,.32,1.275) both;
-  border-top: 3px solid var(--cc);
+  border-top: 4px solid #ef4444;
 }
 @keyframes cardIn {
   from { opacity:0; transform: scale(0.87) translateY(14px); }
   to   { opacity:1; transform: scale(1) translateY(0); }
 }
-.s-card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.12); }
+.s-card:hover { transform: translateY(-3px); border-color: rgba(239,68,68,0.55); }
 .s-card::after {
   content: ''; position: absolute;
-  top: -50px; right: -50px; width: 140px; height: 140px;
-  border-radius: 50%; background: var(--cc); opacity: 0.06; pointer-events: none;
+  top: -50px; right: -50px; width: 160px; height: 160px;
+  border-radius: 50%; background: #ef4444; opacity: 0.07; pointer-events: none;
 }
 
 .s-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
@@ -391,23 +391,29 @@ input.shake { animation: shake 0.35s; border-color: #ef4444; }
   width: 50px; height: 50px; border-radius: 13px;
   display: flex; align-items: center; justify-content: center;
   font-size: 1.15rem; font-weight: 900; color: white;
-  background: var(--cc); flex-shrink: 0;
+  background: #ef4444; flex-shrink: 0;
+  box-shadow: 0 0 14px rgba(239,68,68,0.4);
 }
 .s-waiting-tag {
-  background: rgba(245,158,11,0.12); color: var(--t-amber);
-  border: 1px solid rgba(245,158,11,0.2);
+  background: rgba(239,68,68,0.18); color: #ff8080;
+  border: 1px solid rgba(239,68,68,0.4);
   font-size: 0.67rem; font-weight: 800; padding: 3px 9px; border-radius: 20px;
   text-transform: uppercase; letter-spacing: 0.3px;
+  animation: tagPulse 2s ease-in-out infinite;
 }
-.s-name  { font-size: 1.08rem; font-weight: 900; line-height: 1.2; color: var(--t-text); margin-bottom: 3px; }
-.s-grade { font-size: 0.79rem; color: var(--t-muted); font-weight: 600; }
+@keyframes tagPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+  50%      { box-shadow: 0 0 0 4px rgba(239,68,68,0.15); }
+}
+.s-name  { font-size: 1.08rem; font-weight: 900; line-height: 1.2; color: #fff; margin-bottom: 3px; }
+.s-grade { font-size: 0.79rem; color: rgba(255,180,180,0.8); font-weight: 600; }
 .s-plate {
   display: inline-block; margin-top: 8px;
   font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; font-weight: 700;
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
-  padding: 2px 9px; border-radius: 6px; color: var(--t-amber); letter-spacing: 1.5px;
+  background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25);
+  padding: 2px 9px; border-radius: 6px; color: #ffaaaa; letter-spacing: 1.5px;
 }
-.s-time  { font-size: 0.7rem; color: var(--t-muted); margin-top: 9px; margin-bottom: 12px; font-family: 'JetBrains Mono', monospace; }
+.s-time  { font-size: 0.7rem; color: rgba(255,180,180,0.65); margin-top: 9px; margin-bottom: 12px; font-family: 'JetBrains Mono', monospace; }
 .card-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 0; }
 .btn-sent {
   padding: 11px 6px;
@@ -426,7 +432,18 @@ input.shake { animation: shake 0.35s; border-color: #ef4444; }
 }
 .btn-gone:hover { filter: brightness(1.1); transform: scale(1.02); box-shadow: 0 5px 16px rgba(16,185,129,0.3); }
 /* sent status card */
-.s-card.is-sent { border-top-color: #2e90d4; opacity: 0.85; }
+.s-card.is-sent {
+  background: rgba(14, 52, 100, 0.55) !important;
+  border-color: rgba(46,144,212,0.4) !important;
+  border-top-color: #2e90d4 !important;
+  opacity: 1;
+}
+.s-card.is-sent .s-avatar { background: #2e90d4 !important; box-shadow: 0 0 14px rgba(46,144,212,0.4); }
+.s-card.is-sent .s-name  { color: #c8e0f8; }
+.s-card.is-sent .s-grade { color: rgba(150,200,240,0.75); }
+.s-card.is-sent .s-plate { background: rgba(46,144,212,0.12); border-color: rgba(46,144,212,0.25); color: #7ec8f0; }
+.s-card.is-sent .s-time  { color: rgba(150,200,240,0.6); }
+.s-card.is-sent::after   { background: #2e90d4 !important; }
 .s-sent-tag {
   background: rgba(46,144,212,0.15); color: #5ab4e8;
   border: 1px solid rgba(46,144,212,0.3);
@@ -1023,8 +1040,8 @@ function renderTeacher(list) {
       const t    = s.timestamp ? new Date(s.timestamp).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
       const isSent = s.status === 'sent';
       const tag  = isSent
-        ? `<div class="s-sent-tag">📨 Sent for</div>`
-        : `<div class="s-waiting-tag">⏳ Waiting</div>`;
+        ? `<div class="s-sent-tag">📨 Sent for Student</div>`
+        : `<div class="s-waiting-tag">🔴 Still Waiting</div>`;
       return `<div class="s-card ${isSent ? 'is-sent' : ''}" style="--cc:${c}">
         <div class="s-card-top">
           <div class="s-avatar">${initials(s.name)}</div>
