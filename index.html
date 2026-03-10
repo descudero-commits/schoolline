@@ -50,9 +50,9 @@
     });
   };
 
-  /* ── TEACHER: mark picked up ── */
-  window.fbMarkDone = function(id) {
-    update(ref(db, `arrivals/${todayKey()}/${id}`), { status: 'done' });
+  /* ── TEACHER: update status ── */
+  window.fbMarkDone = function(id, status) {
+    update(ref(db, `arrivals/${todayKey()}/${id}`), { status });
   };
 
   /* ── REPORT: load a specific date ── */
@@ -408,14 +408,55 @@ input.shake { animation: shake 0.35s; border-color: #ef4444; }
   padding: 2px 9px; border-radius: 6px; color: var(--t-amber); letter-spacing: 1.5px;
 }
 .s-time  { font-size: 0.7rem; color: var(--t-muted); margin-top: 9px; margin-bottom: 12px; font-family: 'JetBrains Mono', monospace; }
-.pickup-btn {
-  width: 100%; padding: 11px;
+.card-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 0; }
+.btn-sent {
+  padding: 11px 6px;
+  background: linear-gradient(135deg, #1d6fa4, #2e90d4);
+  color: white; border: none; border-radius: 11px;
+  font-family: 'Outfit', sans-serif; font-size: 0.82rem; font-weight: 800;
+  cursor: pointer; transition: all 0.2s; text-align: center; line-height: 1.2;
+}
+.btn-sent:hover { filter: brightness(1.12); transform: scale(1.02); box-shadow: 0 5px 16px rgba(46,144,212,0.35); }
+.btn-gone {
+  padding: 11px 6px;
   background: linear-gradient(135deg, #059669, var(--t-green));
   color: white; border: none; border-radius: 11px;
-  font-family: 'Outfit', sans-serif; font-size: 0.87rem; font-weight: 800;
-  cursor: pointer; transition: all 0.2s;
+  font-family: 'Outfit', sans-serif; font-size: 0.82rem; font-weight: 800;
+  cursor: pointer; transition: all 0.2s; text-align: center; line-height: 1.2;
 }
-.pickup-btn:hover { filter: brightness(1.1); transform: scale(1.02); box-shadow: 0 5px 16px rgba(16,185,129,0.3); }
+.btn-gone:hover { filter: brightness(1.1); transform: scale(1.02); box-shadow: 0 5px 16px rgba(16,185,129,0.3); }
+/* sent status card */
+.s-card.is-sent { border-top-color: #2e90d4; opacity: 0.85; }
+.s-sent-tag {
+  background: rgba(46,144,212,0.15); color: #5ab4e8;
+  border: 1px solid rgba(46,144,212,0.3);
+  font-size: 0.67rem; font-weight: 800; padding: 3px 9px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
+/* color picker panel */
+.color-picker-panel {
+  position: fixed; bottom: 24px; right: 24px; z-index: 200;
+  background: var(--t-surface); border: 1px solid var(--t-border);
+  border-radius: 16px; padding: 16px 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  display: none;
+}
+#view-teacher .color-picker-panel { display: block; }
+.cp-label { font-size: 0.72rem; font-weight: 800; color: var(--t-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+.cp-swatches { display: flex; gap: 8px; flex-wrap: wrap; max-width: 200px; }
+.cp-swatch {
+  width: 28px; height: 28px; border-radius: 8px; cursor: pointer;
+  border: 2px solid transparent; transition: all 0.15s;
+  flex-shrink: 0;
+}
+.cp-swatch:hover { transform: scale(1.15); }
+.cp-swatch.active { border-color: white; box-shadow: 0 0 0 2px rgba(255,255,255,0.4); }
+.cp-custom { margin-top: 10px; display: flex; align-items: center; gap: 8px; }
+.cp-custom label { font-size: 0.72rem; color: var(--t-muted); font-weight: 700; }
+input[type=color] {
+  width: 36px; height: 28px; border: none; border-radius: 6px;
+  cursor: pointer; padding: 0; background: none;
+}
 
 /* empty */
 .t-empty {
@@ -960,36 +1001,47 @@ function renderGateLog(list) {
 
 /* ── TEACHER BOARD ────────────────────────────────── */
 function renderTeacher(list) {
-  const waiting = list.filter(s => s.status !== 'done');
+  const active  = list.filter(s => s.status === 'waiting' || s.status === 'sent');
   const done    = list.filter(s => s.status === 'done');
 
-  document.getElementById('tWaiting').textContent = waiting.length;
-  document.getElementById('tDone').textContent    = done.length;
-  document.getElementById('tTotal').textContent   = list.length;
+  document.getElementById('tWaiting').textContent  = active.length;
+  document.getElementById('tDone').textContent     = done.length;
+  document.getElementById('tTotal').textContent    = list.length;
   document.getElementById('doneCount').textContent = done.length;
 
   // waiting grid
   const grid = document.getElementById('waitingGrid');
-  if (!waiting.length) {
+  if (!active.length) {
     grid.innerHTML = `<div class="t-empty">
       <div class="t-empty-icon">🎉</div>
       <div class="t-empty-title">All clear!</div>
       <div class="t-empty-sub">No students waiting right now.</div>
     </div>`;
   } else {
-    grid.innerHTML = waiting.map(s => {
-      const c = colorFor(s.name);
-      const t = s.timestamp ? new Date(s.timestamp).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
-      return `<div class="s-card" style="--cc:${c}">
+    grid.innerHTML = active.map(s => {
+      const c    = colorFor(s.name);
+      const t    = s.timestamp ? new Date(s.timestamp).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) : '—';
+      const isSent = s.status === 'sent';
+      const tag  = isSent
+        ? `<div class="s-sent-tag">📨 Sent for</div>`
+        : `<div class="s-waiting-tag">⏳ Waiting</div>`;
+      return `<div class="s-card ${isSent ? 'is-sent' : ''}" style="--cc:${c}">
         <div class="s-card-top">
           <div class="s-avatar">${initials(s.name)}</div>
-          <div class="s-waiting-tag">⏳ Waiting</div>
+          ${tag}
         </div>
         <div class="s-name">${s.name}</div>
         <div class="s-grade">${s.grade}</div>
-        ${s.plate?`<div class="s-plate">${s.plate}</div>`:''}
+        ${s.plate ? `<div class="s-plate">${s.plate}</div>` : ''}
         <div class="s-time">Arrived ${t}</div>
-        <button class="pickup-btn" onclick="markDone('${s.id}')">✓ Mark as Picked Up</button>
+        <div class="card-btns">
+          <button class="btn-sent ${isSent?'':''}" onclick="markStatus('${s.id}','sent')" ${isSent?'disabled style="opacity:0.45;cursor:default"':''}>
+            📨 Send for Student
+          </button>
+          <button class="btn-gone" onclick="markStatus('${s.id}','done')">
+            ✅ Student Left
+          </button>
+        </div>
       </div>`;
     }).join('');
   }
@@ -1006,12 +1058,12 @@ function renderTeacher(list) {
   }).join('');
 }
 
-function markDone(id) {
+function markStatus(id, status) {
   if (fbReady) {
-    window.fbMarkDone(id);
+    window.fbMarkDone(id, status);
   } else {
     const s = allStudents.find(x => x.id === id);
-    if (s) { s.status = 'done'; renderTeacher(allStudents); renderGateLog(allStudents); }
+    if (s) { s.status = status; renderTeacher(allStudents); renderGateLog(allStudents); }
   }
 }
 
@@ -1078,6 +1130,60 @@ function exportCSV() {
 
 /* ── REPORT: default date ─ */
 document.getElementById('rDate').value = todayISO();
+
+/* ── BACKGROUND COLOR PICKER ─────────────────────── */
+const BG_PRESETS = [
+  { hex:'#080f1c', label:'Default Dark' },
+  { hex:'#0a1628', label:'Navy' },
+  { hex:'#0d1f0d', label:'Forest' },
+  { hex:'#1a0a0a', label:'Burgundy' },
+  { hex:'#0a0a1a', label:'Deep Purple' },
+  { hex:'#111111', label:'Black' },
+  { hex:'#1a1a2e', label:'Midnight' },
+  { hex:'#0f2027', label:'Teal Dark' },
+  { hex:'#1c1c1c', label:'Charcoal' },
+  { hex:'#f0f4f8', label:'Light Gray' },
+  { hex:'#ffffff', label:'White' },
+  { hex:'#fef9f0', label:'Warm White' },
+];
+
+const swatchContainer = document.getElementById('cpSwatches');
+const savedBg = localStorage.getItem('teacher-bg');
+if (savedBg) applyBg(savedBg, false);
+
+BG_PRESETS.forEach(p => {
+  const el = document.createElement('div');
+  el.className = 'cp-swatch' + ((!savedBg && p.hex === '#080f1c') || savedBg === p.hex ? ' active' : '');
+  el.style.background = p.hex;
+  el.title = p.label;
+  el.onclick = () => { applyBg(p.hex); document.getElementById('cpCustom').value = p.hex; };
+  swatchContainer.appendChild(el);
+});
+
+function applyBg(hex, save=true) {
+  document.getElementById('view-teacher').style.background = hex;
+  // update active swatch
+  document.querySelectorAll('.cp-swatch').forEach(s => {
+    s.classList.toggle('active', s.style.background === hex || rgbToHex(s.style.background) === hex.toLowerCase());
+  });
+  if (save) localStorage.setItem('teacher-bg', hex);
+}
+
+function rgbToHex(rgb) {
+  const m = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (!m) return rgb;
+  return '#' + [m[1],m[2],m[3]].map(x => parseInt(x).toString(16).padStart(2,'0')).join('');
+}
 </script>
+<!-- COLOR PICKER (teacher view only) -->
+<div class="color-picker-panel" id="colorPickerPanel">
+  <div class="cp-label">🎨 Background Color</div>
+  <div class="cp-swatches" id="cpSwatches"></div>
+  <div class="cp-custom">
+    <label>Custom</label>
+    <input type="color" id="cpCustom" value="#080f1c" oninput="applyBg(this.value)"/>
+  </div>
+</div>
+
 </body>
 </html>
